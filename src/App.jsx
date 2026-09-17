@@ -302,11 +302,11 @@ function Row({ name, line, comment, rate, t }) {
         {comment && <span className="row-joke">{comment}</span>}
       </div>
       <div className="cells">
-        <div><small>{t.charged}</small><b>{formatLL(line.charged)}</b>{usd(line.charged)}</div>
-        <div><small>{t.ministry}</small><b>{formatLL(line.official)}</b>{usd(line.official)}</div>
+        <div><small>{t.charged}</small><b>{formatLL(line.charged)} <u>LL</u></b>{usd(line.charged)}</div>
+        <div><small>{t.ministry}</small><b>{formatLL(line.official)} <u>LL</u></b>{usd(line.official)}</div>
         <div className={over ? "over" : under ? "under" : ""}>
           <small>{t.difference}</small>
-          <b>{line.diff === null ? "—" : `${over ? "+" : ""}${formatLL(line.diff)}`}</b>
+          <b>{line.diff === null ? "—" : <>{over ? "+" : ""}{formatLL(line.diff)} <u>LL</u></>}</b>
           {usd(line.diff)}
           {line.pct !== null && Math.round(line.diff) !== 0 && <em>{line.pct > 0 ? "+" : ""}{line.pct.toFixed(1)}%</em>}
         </div>

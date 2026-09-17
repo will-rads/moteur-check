@@ -172,6 +172,8 @@ small { font-size: 13px; }
 .cells small { color: var(--accent-ink); font-weight: 600; font-size: 13px; }
 .cells b { font-family: var(--mono); font-weight: 500; font-size: 17px; letter-spacing: 0; }
 .cells em { font-family: var(--mono); font-style: normal; font-size: 14px; font-weight: 500; color: var(--red); }
+.cells b u { text-decoration: none; font-size: 11px; color: var(--ink-3); }
+.cells .over b u { color: rgba(247, 247, 242, 0.7); }
 .cells i { grid-column: 2 / -1; font-family: var(--mono); font-style: normal; font-size: 13px; font-weight: 500; color: var(--accent-ink); text-align: end; }
 .cells small { grid-row: 1 / 3; align-self: center; }
 .cells .over { background: var(--ink); color: var(--bg); }
