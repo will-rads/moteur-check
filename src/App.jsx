@@ -180,7 +180,6 @@ export default function App() {
             <a className="brand" href="/" onClick={(e) => { e.preventDefault(); reset(); }}>
               <span className="brand-mark" aria-hidden="true">⚡</span> Moteur Check
             </a>
-            {step !== "upload" && <button type="button" className="appbar-btn" onClick={reset}>New bill</button>}
           </header>
 
           {step === "upload" && (
@@ -283,7 +282,8 @@ function Field({ label, value, onChange, type = "text", required }) {
   );
 }
 
-function Row({ name, line, comment }) {
+function Row({ name, line, comment, rate }) {
+  const usd = (v) => (v === null || !rate ? null : <i>{formatUSD(v / rate)}</i>);
   const over = line.diff !== null && Math.round(line.diff) > 0;
   const under = line.diff !== null && Math.round(line.diff) < 0;
   return (
@@ -293,11 +293,12 @@ function Row({ name, line, comment }) {
         {comment && <span className="row-joke">{comment}</span>}
       </div>
       <div className="cells">
-        <div><small>Charged</small><b>{formatLL(line.charged)}</b></div>
-        <div><small>Ministry</small><b>{formatLL(line.official)}</b></div>
+        <div><small>Charged</small><b>{formatLL(line.charged)}</b>{usd(line.charged)}</div>
+        <div><small>Ministry</small><b>{formatLL(line.official)}</b>{usd(line.official)}</div>
         <div className={over ? "over" : under ? "under" : ""}>
           <small>Difference</small>
           <b>{line.diff === null ? "—" : `${over ? "+" : ""}${formatLL(line.diff)}`}</b>
+          {usd(line.diff)}
           {line.pct !== null && Math.round(line.diff) !== 0 && <em>{line.pct > 0 ? "+" : ""}{line.pct.toFixed(1)}%</em>}
         </div>
       </div>
@@ -341,9 +342,11 @@ function Verdict({ lookup, outcome, month, zone, warnings, onRetry, onReset }) {
 
   return (
     <section className="verdict enter">
-      <p className="kicker">{label} · {zone === "cities" ? "City zone" : "Village zone"}</p>
-      <h1 className="headline">{HEADLINES[key]}</h1>
-      <p className={`status ${confirmed ? "ok" : "warn"}`}>{statusText}</p>
+      <div className="headline-row">
+        <h1 className="headline">{HEADLINES[key]}</h1>
+        <img className="mascot" src="/receipt-mascot.png" alt="" width="96" height="96" />
+      </div>
+      <p className={`status ${confirmed ? "ok" : "warn"}`}>{label} · {zone === "cities" ? "City" : "Village"} · {statusText}</p>
 
       {result && confirmed && (
         <div className="big">
@@ -362,9 +365,9 @@ function Verdict({ lookup, outcome, month, zone, warnings, onRetry, onReset }) {
 
       {result && confirmed && (
         <div className="table">
-          <Row name="Per kWh" line={result.lines.rate} comment={jokes.rate} />
-          <Row name={`Fixed fee${bill.amps ? `, ${bill.amps} A` : ""}`} line={result.lines.fixed} comment={jokes.fixed} />
-          <Row name={`Total for ${formatLL(bill.kwh)} kWh`} line={result.lines.total} comment={bothMatch ? "Both lines match the published tariff. Someone read the newspaper." : null} />
+          <Row name="Per kWh" line={result.lines.rate} comment={jokes.rate} rate={result.displayRateLL} />
+          <Row name={`Fixed fee${bill.amps ? `, ${bill.amps} A` : ""}`} line={result.lines.fixed} comment={jokes.fixed} rate={result.displayRateLL} />
+          <Row name={`Total for ${formatLL(bill.kwh)} kWh`} line={result.lines.total} comment={bothMatch ? "Both lines match the published tariff. Someone read the newspaper." : null} rate={result.displayRateLL} />
         </div>
       )}
 
@@ -407,12 +410,16 @@ function Verdict({ lookup, outcome, month, zone, warnings, onRetry, onReset }) {
             <button type="button" className="btn primary" onClick={copy}>{copied ? "Copied" : "Copy message"}</button>
             <a className="btn" href={`https://wa.me/?text=${encodeURIComponent(text)}`} target="_blank" rel="noopener noreferrer">Open in WhatsApp</a>
           </div>
+          <div className="escalate">
+            <p><strong>No fix?</strong> Generator overbilling can be reported to the Ministry of Economy's Consumer Protection hotline.</p>
+            <a className="btn" href="tel:1739">Call Consumer Protection (1739)</a>
+          </div>
         </div>
       ) : (
         result && confirmed && <p className="note">No complaint needed for this bill. Keep the check handy for next month.</p>
       )}
 
-      <details className="sources" open>
+      <details className="sources">
         <summary>Sources and provenance</summary>
         <p className="muted">Searched {lookup.searchedAt ? new Date(lookup.searchedAt).toLocaleString() : "now"}{lookup.referenceCheckedAt && ` · saved reference checked ${lookup.referenceCheckedAt}`}{lookup.tariff?.publicationDate && ` · tariff published ${lookup.tariff.publicationDate}`}</p>
         {lookup.tariff && (
@@ -430,7 +437,7 @@ function Verdict({ lookup, outcome, month, zone, warnings, onRetry, onReset }) {
       </details>
 
       <div className="actions end">
-        <button type="button" className="btn ghost" onClick={onReset}>Check another bill</button>
+        <button type="button" className="btn primary" onClick={onReset}>Check another bill</button>
       </div>
     </section>
   );
