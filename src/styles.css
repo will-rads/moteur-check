@@ -57,6 +57,7 @@ small { font-size: 13px; }
 .appbar { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: calc(12px + env(safe-area-inset-top)) var(--pad) 12px; background: rgba(247, 247, 242, 0.88); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
 .brand { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; letter-spacing: -0.02em; text-decoration: none; font-size: 18px; }
 .brand-mark { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 9px; background: var(--ink); color: var(--bg); font-size: 14px; }
+.appbar .seg button { min-height: 32px; padding: 0 12px; font-size: 14px; }
 .appbar-btn { min-height: 36px; padding: 0 12px; border-radius: 10px; border: 1.5px solid var(--line-2); background: transparent; font-weight: 600; font-size: 14px; color: var(--ink-2); cursor: pointer; transition: transform 0.16s var(--ease-out), color 0.2s ease, border-color 0.2s ease; }
 .appbar-btn:active { transform: scale(0.96); }
 
@@ -96,11 +97,15 @@ small { font-size: 13px; }
 .btn { display: inline-flex; align-items: center; justify-content: center; min-height: 52px; padding: 0 20px; border-radius: 14px; border: 1.5px solid var(--line-2); background: var(--surface); font-weight: 600; letter-spacing: -0.01em; cursor: pointer; text-decoration: none; transition: transform 0.16s var(--ease-out), background 0.2s ease, border-color 0.2s ease, color 0.2s ease; flex: 1 1 auto; }
 .btn:active { transform: scale(0.97); }
 .btn.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.btn.wa { background: #25d366; border-color: #25d366; color: #fff; }
+.btn.danger { background: var(--red); border-color: var(--red); color: #fff; font-weight: 700; }
 .btn.ghost { background: transparent; border-color: transparent; color: var(--ink-2); flex: 0 0 auto; }
 @media (hover: hover) and (pointer: fine) {
   .btn:hover { border-color: var(--ink); }
   .btn.primary:hover { background: #12386b; border-color: #12386b; }
   .btn.ghost:hover { color: var(--ink); border-color: var(--line-2); }
+  .btn.wa:hover { background: #1fb457; border-color: #1fb457; }
+  .btn.danger:hover { background: #c41f17; border-color: #c41f17; }
   .zone:hover { border-color: var(--accent); }
   .seg button:hover:not(.on) { color: var(--ink); }
   .field input:hover { border-color: var(--ink-3); }
@@ -138,6 +143,9 @@ small { font-size: 13px; }
 .verdict { padding: 8px var(--pad) 8px; }
 .headline-row { display: flex; align-items: flex-start; gap: 10px; margin: 6px 0 12px; }
 .headline { flex: 1 1 auto; }
+[dir="rtl"] { --sans: "DM Sans Variable", "DM Sans", "Segoe UI", system-ui, sans-serif; }
+[dir="rtl"] .brand-mark { order: 0; }
+.cells b, .cells i, .cells em, .stamp, .big-ll, .mono { direction: ltr; unicode-bidi: isolate; }
 .mascot { width: 96px; height: 96px; flex: 0 0 auto; margin-top: -6px; filter: drop-shadow(0 10px 14px rgba(12, 44, 85, 0.16)); animation: mascot 0.5s var(--ease-out) 0.15s both; }
 @keyframes mascot { from { opacity: 0; transform: translateY(8px) rotate(4deg); } }
 .status { display: inline-block; font-size: 14px; font-weight: 600; padding: 6px 12px; border-radius: 999px; margin-bottom: 18px; }
@@ -161,13 +169,13 @@ small { font-size: 13px; }
 .row-joke { color: var(--ink-2); font-size: 14px; font-style: italic; line-height: 1.4; }
 .cells { display: grid; gap: 6px; }
 .cells > div { display: grid; grid-template-columns: 1fr auto auto; align-items: baseline; gap: 0 8px; padding: 9px 12px; border-radius: 10px; background: var(--surface-2); }
-.cells small { color: var(--ink-3); font-weight: 600; font-size: 13px; }
+.cells small { color: var(--accent-ink); font-weight: 600; font-size: 13px; }
 .cells b { font-family: var(--mono); font-weight: 500; font-size: 17px; letter-spacing: 0; }
 .cells em { font-family: var(--mono); font-style: normal; font-size: 14px; font-weight: 500; color: var(--red); }
-.cells i { grid-column: 2 / -1; font-family: var(--mono); font-style: normal; font-size: 12px; color: var(--ink-3); text-align: right; }
+.cells i { grid-column: 2 / -1; font-family: var(--mono); font-style: normal; font-size: 13px; font-weight: 500; color: var(--accent-ink); text-align: end; }
 .cells small { grid-row: 1 / 3; align-self: center; }
 .cells .over { background: var(--ink); color: var(--bg); }
-.cells .over small, .cells .over i { color: rgba(247, 247, 242, 0.7); }
+.cells .over small, .cells .over i { color: var(--accent); }
 .cells .over em { color: var(--red-on-navy); }
 .cells .under { background: var(--accent-soft); }
 
