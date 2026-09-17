@@ -37,3 +37,7 @@ Behind an HTTPS-inspecting antivirus, run Node with `--use-system-ca`.
 - `tests/tariff.test.mjs` — the acceptance math, including the real August bill.
 
 See `QA.md` for what was tested and what was not.
+
+## Credits
+
+3D images (icons and the receipt mascot) generated with GPT Image 2.5 Flare via Higgsfield. Tariff lookup and bill reading by Gemini 3.8 Flash.
