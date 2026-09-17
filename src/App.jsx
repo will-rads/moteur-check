@@ -32,6 +32,21 @@ async function shrink(file) {
 const num = (v) => (v === null || v === undefined ? "" : String(v));
 const monthOf = (iso) => (typeof iso === "string" && /^\d{4}-\d{2}/.test(iso) ? iso.slice(0, 7) : "");
 
+function ZonePicker({ name, zone, onPick, legend }) {
+  return (
+    <fieldset className="zones">
+      <legend>{legend}</legend>
+      {Object.entries(ZONES).map(([key, text]) => (
+        <label key={key} className={`zone ${zone === key ? "on" : ""}`}>
+          <input type="radio" name={name} value={key} checked={zone === key} onChange={() => onPick(key)} />
+          <span className="zone-title">{key === "cities" ? "City" : "Village"}</span>
+          <span className="zone-desc">{text}</span>
+        </label>
+      ))}
+    </fieldset>
+  );
+}
+
 export default function App() {
   const [step, setStep] = useState("upload");
   const [zone, setZone] = useState("");
@@ -43,11 +58,13 @@ export default function App() {
   const [warnings, setWarnings] = useState([]);
   const [lookup, setLookup] = useState(null);
   const [outcome, setOutcome] = useState(null);
+  const screenRef = useRef(null);
   const zoneRef = useRef(null);
   const cameraRef = useRef(null);
   const galleryRef = useRef(null);
 
   useEffect(() => () => photoUrl && URL.revokeObjectURL(photoUrl), [photoUrl]);
+  const toTop = () => screenRef.current?.scrollTo({ top: 0 });
 
   function reset() {
     setStep("upload");
@@ -58,7 +75,7 @@ export default function App() {
     setLookup(null);
     setOutcome(null);
     setPhotoUrl("");
-    window.scrollTo({ top: 0 });
+    toTop();
   }
 
   function pick(ref) {
@@ -78,11 +95,12 @@ export default function App() {
     if (!file) return; // picker cancelled
     setError("");
     setStep("reading");
+    toTop();
     try {
       if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) throw new Error("Use a JPEG, PNG or WebP photo. HEIC and PDF are not supported yet.");
+      setPhotoUrl(URL.createObjectURL(file));
       const blob = await shrink(file);
       if (blob.size > 4 * 1024 * 1024) throw new Error("The photo is too large even after shrinking. Try a smaller one.");
-      setPhotoUrl(URL.createObjectURL(blob));
       const res = await fetch("/api/read", { method: "POST", headers: { "Content-Type": "image/jpeg" }, body: blob });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Reading the photo failed. Please try again.");
@@ -128,6 +146,7 @@ export default function App() {
     if (!zone) return setError("Confirm the area category first.");
     setWarnings(normalized.warnings);
     setStep("searching");
+    toTop();
     let data;
     try {
       const res = await fetch("/api/tariff", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ month, zone }) });
@@ -148,117 +167,110 @@ export default function App() {
       }
     } else setOutcome({ result: null, bill: normalized.bill, key: "unconfirmed" });
     setStep("verdict");
-    window.scrollTo({ top: 0 });
+    toTop();
   }
 
   const label = month && /^\d{4}-\d{2}$/.test(month) ? monthLabel(month) : "";
 
   return (
-    <main className="page">
-      <header className="top">
-        <a className="brand" href="/" onClick={(e) => { e.preventDefault(); reset(); }}>
-          <span className="brand-mark" aria-hidden="true">⚡</span> Moteur Check
-        </a>
-        <span className="top-note">Lebanon · generator bills</span>
-      </header>
+    <div className="stage">
+      <div className="device">
+        <div className="screen" ref={screenRef}>
+          <header className="appbar">
+            <a className="brand" href="/" onClick={(e) => { e.preventDefault(); reset(); }}>
+              <span className="brand-mark" aria-hidden="true">⚡</span> Moteur Check
+            </a>
+            {step !== "upload" && <button type="button" className="appbar-btn" onClick={reset}>New bill</button>}
+          </header>
 
-      {step === "upload" && (
-        <section className="hero enter">
-          <img className="hero-icon float" src="/icon-moteur.png" alt="" width="220" height="220" />
-          <h1>Is your moteur guy overcharging you?</h1>
-          <p className="lede">Snap the bill. We read it, find the Ministry's published tariff for that month, and show you the difference. Then we write the message for you.</p>
+          {step === "upload" && (
+            <>
+              <section className="home enter">
+                <img className="home-icon float" src="/icon-moteur.png" alt="" width="170" height="170" />
+                <h1>Is your moteur guy overcharging you?</h1>
+                <p className="lede">Snap the bill. We find the Ministry's tariff for that month, show the difference, and write the message.</p>
+                <div ref={zoneRef} className={zoneNudge ? "nudge" : ""}>
+                  <ZonePicker name="zone" zone={zone} legend="Where is the generator?" onPick={(k) => { setZone(k); setZoneNudge(false); }} />
+                  {zoneNudge && <p className="nudge-text" role="alert">Pick your area first. The tariff has two zones.</p>}
+                </div>
+                {error && <p className="error" role="alert">{error}</p>}
+                <p className="privacy">Processed by Gemini. This app does not save your bill.</p>
+              </section>
+              <div className="bar">
+                <button type="button" className="btn primary" onClick={() => pick(cameraRef)}>Take a photo</button>
+                <button type="button" className="btn" onClick={() => pick(galleryRef)}>Upload photo</button>
+              </div>
+              <input ref={cameraRef} type="file" accept="image/*" capture="environment" hidden onChange={onFile} />
+              <input ref={galleryRef} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={onFile} />
+            </>
+          )}
 
-          <fieldset className={`zones ${zoneNudge ? "nudge" : ""}`} ref={zoneRef}>
-            <legend>Where is the generator?</legend>
-            {Object.entries(ZONES).map(([key, text]) => (
-              <label key={key} className={`zone ${zone === key ? "on" : ""}`}>
-                <input type="radio" name="zone" value={key} checked={zone === key} onChange={() => { setZone(key); setZoneNudge(false); }} />
-                <span className="zone-title">{key === "cities" ? "City" : "Village"}</span>
-                <span className="zone-desc">{text}</span>
-              </label>
-            ))}
-            {zoneNudge && <p className="nudge-text" role="alert">Pick your area first. The tariff has two zones.</p>}
-          </fieldset>
+          {step === "reading" && (
+            <section className="wait enter" aria-live="polite">
+              <div className="scan">
+                {photoUrl ? <img src={photoUrl} alt="Your bill" /> : <img className="wait-icon" src="/icon-bill.png" alt="" width="160" height="160" />}
+                <span className="scan-line" aria-hidden="true" />
+              </div>
+              <h2>Reading your bill…</h2>
+              <p className="muted">Gemini is picking out the numbers. A few seconds.</p>
+            </section>
+          )}
 
-          <div className="actions">
-            <button type="button" className="btn primary" onClick={() => pick(cameraRef)}>Take a photo</button>
-            <button type="button" className="btn" onClick={() => pick(galleryRef)}>Upload photo</button>
-          </div>
-          <input ref={cameraRef} type="file" accept="image/*" capture="environment" hidden onChange={onFile} />
-          <input ref={galleryRef} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={onFile} />
-          {error && <p className="error" role="alert">{error}</p>}
-          <p className="privacy">Processed by Gemini. This app does not save your bill.</p>
-        </section>
-      )}
+          {step === "review" && (
+            <>
+              <form className="review enter" onSubmit={confirm} id="review">
+                <div className="review-head">
+                  {photoUrl && <img className="thumb" src={photoUrl} alt="Your bill" />}
+                  <div>
+                    <h2>Does this look right?</h2>
+                    <p className="muted">Fix anything the photo got wrong.{fields.areaHint && <> Bill says: <strong>{fields.areaHint}</strong>.</>}</p>
+                  </div>
+                </div>
+                <div className="grid">
+                  <Field label="Billing month" type="month" value={month} onChange={setMonth} required />
+                  <Field label="kWh consumed" value={fields.kwh} onChange={(v) => setFields({ ...fields, kwh: v })} required />
+                  <Field label="Price per kWh (LL)" value={fields.rateLL} onChange={(v) => setFields({ ...fields, rateLL: v })} />
+                  <Field label="Fixed fee (LL)" value={fields.fixedLL} onChange={(v) => setFields({ ...fields, fixedLL: v })} />
+                  <Field label="Amps" value={fields.amps} onChange={(v) => setFields({ ...fields, amps: v })} />
+                  <Field label="Total on the bill (LL)" value={fields.totalLL} onChange={(v) => setFields({ ...fields, totalLL: v })} />
+                  <Field label="Previous reading" value={fields.previousReading} onChange={(v) => setFields({ ...fields, previousReading: v })} />
+                  <Field label="Current reading" value={fields.currentReading} onChange={(v) => setFields({ ...fields, currentReading: v })} />
+                </div>
+                <ZonePicker name="zone2" zone={zone} legend="Area category" onPick={setZone} />
+                {error && <p className="error" role="alert">{error}</p>}
+              </form>
+              <div className="bar">
+                <button type="submit" form="review" className="btn primary">Looks right</button>
+              </div>
+            </>
+          )}
 
-      {step === "reading" && (
-        <section className="wait enter" aria-live="polite">
-          <div className="scan">
-            {photoUrl ? <img src={photoUrl} alt="Your bill" /> : <img className="wait-icon" src="/icon-bill.png" alt="" width="160" height="160" />}
-            <span className="scan-line" aria-hidden="true" />
-          </div>
-          <h2>Reading your bill…</h2>
-          <p className="muted">Gemini is picking out the numbers. A few seconds.</p>
-        </section>
-      )}
+          {step === "searching" && (
+            <section className="wait enter" aria-live="polite">
+              <img className="wait-icon pulse" src="/icon-bill.png" alt="" width="160" height="160" />
+              <h2>Searching the tariff for {label}…</h2>
+              <p className="muted">Live search for the Ministry of Energy and Water's announcement. Usually 10 to 20 seconds.</p>
+            </section>
+          )}
 
-      {step === "review" && (
-        <form className="review enter" onSubmit={confirm}>
-          <div className="review-head">
-            {photoUrl && <img className="thumb" src={photoUrl} alt="Your bill" />}
-            <div>
-              <h2>Does this look right?</h2>
-              <p className="muted">Fix anything the photo got wrong. {fields.areaHint && <>Bill says: <strong>{fields.areaHint}</strong>.</>}</p>
-            </div>
-          </div>
+          {step === "verdict" && lookup && outcome && (
+            <Verdict lookup={lookup} outcome={outcome} month={month} zone={zone} warnings={warnings} onRetry={() => setStep("review")} onReset={reset} />
+          )}
 
-          <div className="grid">
-            <Field label="Billing month" type="month" value={month} onChange={setMonth} required />
-            <Field label="kWh consumed" value={fields.kwh} onChange={(v) => setFields({ ...fields, kwh: v })} required />
-            <Field label="Price per kWh (LL)" value={fields.rateLL} onChange={(v) => setFields({ ...fields, rateLL: v })} />
-            <Field label="Fixed fee (LL)" value={fields.fixedLL} onChange={(v) => setFields({ ...fields, fixedLL: v })} />
-            <Field label="Amps" value={fields.amps} onChange={(v) => setFields({ ...fields, amps: v })} />
-            <Field label="Total on the bill (LL)" value={fields.totalLL} onChange={(v) => setFields({ ...fields, totalLL: v })} />
-            <Field label="Previous reading" value={fields.previousReading} onChange={(v) => setFields({ ...fields, previousReading: v })} />
-            <Field label="Current reading" value={fields.currentReading} onChange={(v) => setFields({ ...fields, currentReading: v })} />
-          </div>
-
-          <fieldset className="zones compact">
-            <legend>Area category</legend>
-            {Object.entries(ZONES).map(([key, text]) => (
-              <label key={key} className={`zone ${zone === key ? "on" : ""}`}>
-                <input type="radio" name="zone2" value={key} checked={zone === key} onChange={() => setZone(key)} />
-                <span className="zone-title">{key === "cities" ? "City" : "Village"}</span>
-                <span className="zone-desc">{text}</span>
-              </label>
-            ))}
-          </fieldset>
-
-          {error && <p className="error" role="alert">{error}</p>}
-          <div className="actions">
-            <button type="submit" className="btn primary">Looks right</button>
-            <button type="button" className="btn ghost" onClick={reset}>Start over</button>
-          </div>
-        </form>
-      )}
-
-      {step === "searching" && (
-        <section className="wait enter" aria-live="polite">
-          <img className="wait-icon pulse" src="/icon-bill.png" alt="" width="160" height="160" />
-          <h2>Searching the tariff for {label}…</h2>
-          <p className="muted">Live search for the Ministry of Energy and Water's announcement. Usually 10 to 20 seconds.</p>
-        </section>
-      )}
-
-      {step === "verdict" && lookup && outcome && (
-        <Verdict lookup={lookup} outcome={outcome} month={month} zone={zone} warnings={warnings} onRetry={() => setStep("review")} onReset={reset} />
-      )}
-
-      <footer className="foot">
-        <p>Based on the Ministry of Energy and Water's published tariff. Confirm with the official decree.</p>
-        <p>No accounts. No bill storage. Built for the ZAKA FUN Challenge 2026.</p>
-      </footer>
-    </main>
+          <footer className="foot">
+            <p>Based on the Ministry of Energy and Water's published tariff. Confirm with the official decree.</p>
+            <p>No accounts. No bill storage. Built for the ZAKA FUN Challenge 2026.</p>
+          </footer>
+        </div>
+      </div>
+      <aside className="stage-note">
+        <img src="/app-icon.png" alt="" width="56" height="56" />
+        <div>
+          <strong>Moteur Check is a phone app.</strong>
+          <p>Open this link on your phone and add it to your home screen. Take a photo of the bill, get the verdict, send the message.</p>
+        </div>
+      </aside>
+    </div>
   );
 }
 
@@ -371,27 +383,10 @@ function Verdict({ lookup, outcome, month, zone, warnings, onRetry, onReset }) {
 
       {warnings.map((w) => <p key={w} className="note">{w}</p>)}
 
-      <details className="sources" open>
-        <summary>Sources and provenance</summary>
-        <p className="muted">Searched {lookup.searchedAt ? new Date(lookup.searchedAt).toLocaleString() : "now"}{lookup.referenceCheckedAt && ` · saved reference checked ${lookup.referenceCheckedAt}`}{lookup.tariff?.publicationDate && ` · tariff published ${lookup.tariff.publicationDate}`}</p>
-        {lookup.tariff && (
-          <p className="muted mono">
-            {formatLL(lookup.tariff.perKwhCitiesLL)} LL/kWh city · {formatLL(lookup.tariff.perKwhRemoteLL)} LL/kWh village · fixed {formatLL(lookup.tariff.fixed5LL)} (5 A) / {formatLL(lookup.tariff.fixed10LL)} (10 A) / +{formatLL(lookup.tariff.extra5LL)} per extra 5 A
-          </p>
-        )}
-        <ul>
-          {sources.slice(0, 8).map((s) => (
-            <li key={s.uri}><a href={s.uri} target="_blank" rel="noopener noreferrer">{s.title}</a></li>
-          ))}
-        </ul>
-        {lookup.searchQueries?.length > 0 && <p className="muted">Search queries: {lookup.searchQueries.join(" · ")}</p>}
-        <p className="muted">Based on the Ministry of Energy and Water's published tariff. Confirm with the official decree.</p>
-      </details>
-
       {messages ? (
         <div className="message">
           <div className="message-head">
-            <img src="/icon-message.png" alt="" width="72" height="72" />
+            <img src="/icon-message.png" alt="" width="64" height="64" />
             <div>
               <h2>Message for your moteur guy</h2>
               <p className="muted">Friendly enough to actually send.</p>
@@ -416,6 +411,23 @@ function Verdict({ lookup, outcome, month, zone, warnings, onRetry, onReset }) {
       ) : (
         result && confirmed && <p className="note">No complaint needed for this bill. Keep the check handy for next month.</p>
       )}
+
+      <details className="sources" open>
+        <summary>Sources and provenance</summary>
+        <p className="muted">Searched {lookup.searchedAt ? new Date(lookup.searchedAt).toLocaleString() : "now"}{lookup.referenceCheckedAt && ` · saved reference checked ${lookup.referenceCheckedAt}`}{lookup.tariff?.publicationDate && ` · tariff published ${lookup.tariff.publicationDate}`}</p>
+        {lookup.tariff && (
+          <p className="muted mono">
+            {formatLL(lookup.tariff.perKwhCitiesLL)} LL/kWh city · {formatLL(lookup.tariff.perKwhRemoteLL)} LL/kWh village · fixed {formatLL(lookup.tariff.fixed5LL)} (5 A) / {formatLL(lookup.tariff.fixed10LL)} (10 A) / +{formatLL(lookup.tariff.extra5LL)} per extra 5 A
+          </p>
+        )}
+        <ul>
+          {sources.slice(0, 8).map((s) => (
+            <li key={s.uri}><a href={s.uri} target="_blank" rel="noopener noreferrer">{s.title}</a></li>
+          ))}
+        </ul>
+        {lookup.searchQueries?.length > 0 && <p className="muted">Search queries: {lookup.searchQueries.join(" · ")}</p>}
+        <p className="muted">Based on the Ministry of Energy and Water's published tariff. Confirm with the official decree.</p>
+      </details>
 
       <div className="actions end">
         <button type="button" className="btn ghost" onClick={onReset}>Check another bill</button>

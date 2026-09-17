@@ -1,0 +1,16 @@
+{
+  "name": "Moteur Check",
+  "short_name": "Moteur Check",
+  "description": "Is your generator bill above the Ministry's published tariff? Snap the bill, get the difference, send the message.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F7F7F2",
+  "theme_color": "#0C2C55",
+  "lang": "en",
+  "icons": [
+    { "src": "/app-icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/app-icon.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
