@@ -146,11 +146,11 @@ small { font-size: 13px; }
 /* Verdict */
 .verdict { padding: 8px var(--pad) 8px; }
 .headline-row { display: flex; align-items: flex-start; gap: 10px; margin: 6px 0 12px; }
-.headline { flex: 1 1 auto; }
+.headline { flex: 1 1 auto; font-size: clamp(25px, 7vw, 28px); line-height: 1.1; text-wrap: pretty; }
 [dir="rtl"] { --sans: "DM Sans Variable", "DM Sans", "Segoe UI", system-ui, sans-serif; }
 [dir="rtl"] .brand-mark { order: 0; }
 .cells b, .cells i, .cells em, .stamp, .big-ll, .mono { direction: ltr; unicode-bidi: isolate; }
-.mascot { width: 96px; height: 96px; flex: 0 0 auto; margin-top: -6px; filter: drop-shadow(0 10px 14px rgba(12, 44, 85, 0.16)); animation: mascot 0.5s var(--ease-out) 0.15s both; }
+.mascot { width: 104px; height: 104px; flex: 0 0 auto; margin-top: -8px; filter: drop-shadow(0 10px 14px rgba(12, 44, 85, 0.16)); animation: mascot 0.5s var(--ease-out) 0.15s both; }
 @keyframes mascot { from { opacity: 0; transform: translateY(8px) rotate(4deg); } }
 .status { display: inline-block; font-size: 14px; font-weight: 600; padding: 6px 12px; border-radius: 999px; margin-bottom: 18px; }
 .status.ok { background: var(--accent-soft); color: var(--accent-ink); }
@@ -193,9 +193,9 @@ small { font-size: 13px; }
 
 .message { margin-top: 22px; background: var(--surface); border: 1.5px solid var(--line); border-radius: 20px; padding: 18px; }
 .message-head { display: flex; gap: 12px; align-items: center; margin-bottom: 14px; }
-.message-head h2 { font-size: 20px; }
+.message-head h2 { font-size: 17px; letter-spacing: -0.02em; white-space: nowrap; }
 .message-head .muted { font-size: 14px; }
-.message-head img { width: 64px; height: 64px; flex: 0 0 auto; filter: drop-shadow(0 8px 12px rgba(12, 44, 85, 0.14)); }
+.message-head img { width: 56px; height: 56px; flex: 0 0 auto; filter: drop-shadow(0 8px 12px rgba(12, 44, 85, 0.14)); }
 .toggles { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
 .seg { display: inline-flex; padding: 3px; border-radius: 12px; background: var(--surface-2); }
 .seg button { min-height: 38px; padding: 0 14px; border: 0; border-radius: 9px; background: transparent; font-weight: 600; cursor: pointer; color: var(--ink-2); transition: background 0.18s ease, color 0.18s ease, transform 0.16s var(--ease-out); }
