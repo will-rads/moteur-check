@@ -5,7 +5,7 @@ Gemini reads the numbers, a live grounded search finds the Ministry of Energy an
 published tariff for that billing month, the comparison runs in code, and you get a verdict
 plus a polite or cheeky message (English and Lebanese Arabic) ready to send.
 
-Live: https://moteur-check-fable.vercel.app (works as a phone app: open it on your phone and add it to the home screen).
+Live: https://moteur-check.vercel.app (works as a phone app: open it on your phone and add it to the home screen).
 
 ## Flow
 
