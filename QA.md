@@ -1,4 +1,4 @@
-# QA — Moteur Check (Fable build), 17 Sept 2026
+# QA — Moteur Check, 17 Sept 2026
 
 ## Tested
 

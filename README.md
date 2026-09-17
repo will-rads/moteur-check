@@ -10,7 +10,7 @@ Live: https://moteur-check.vercel.app (works as a phone app: open it on your pho
 ## Flow
 
 1. Pick the area category (city or village zone), then take or upload a photo.
-2. The photo is shrunk in the browser and sent to `/api/read` (Gemini 2.5 Flash vision, structured JSON). Fields are editable.
+2. The photo is shrunk in the browser and sent to `/api/read` (Gemini 3.8 Flash vision, structured JSON). Fields are editable.
 3. `/api/tariff` runs a real Google-grounded search for that month's tariff, then structures the sourced text into JSON. Statuses: `live-matched`, `live-sourced`, `saved-reference`, `conflict`, `unavailable`. July and August 2026 are kept as checked references; a cached result is never shown as a fresh search.
 4. Verdict: headline, three lines (per kWh, fixed fee, total), difference in LL and USD, sources, and the message with Copy and WhatsApp share.
 
@@ -37,6 +37,14 @@ Behind an HTTPS-inspecting antivirus, run Node with `--use-system-ca`.
 - `tests/tariff.test.mjs` — the acceptance math, including the real August bill.
 
 See `QA.md` for what was tested and what was not.
+
+## Submission (ZAKA FUN Challenge 2026)
+
+- Live app: https://moteur-check.vercel.app · Repo: https://github.com/will-rads/moteur-check
+- Vercel project `moteur-check-fable` under the personal `will-namou` scope (the old `moteur-check-fable.vercel.app` alias still works).
+- Description used on the form:
+
+> Every month in Lebanon, millions of people pay a private generator bill for the "moteur." Every month, many of them get overcharged. Nobody checks, because nobody knows the official price. Moteur Check fixes that in ten seconds. Snap a photo of your bill. The app reads the numbers, searches the web live for the Ministry of Energy's tariff for that exact month, and shows you the difference in Lebanese pounds and dollars. Red stamp if you're paying too much. Then comes the fun part. It writes the message to your moteur guy for you. Pick "polite" or "cheeky," in English or Lebanese Arabic, and send it straight to WhatsApp. Still no fix? One tap calls the Consumer Protection hotline. No accounts. No stored bills. Just the truth about your electricity bill, and a way to do something about it.
 
 ## Credits
 
