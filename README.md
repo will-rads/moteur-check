@@ -12,7 +12,7 @@ Live: https://moteur-check.vercel.app (works as a phone app: open it on your pho
 1. Pick the area category (city or village zone), then take or upload a photo.
 2. The photo is shrunk in the browser and sent to `/api/read` (Gemini 3.8 Flash vision, structured JSON). Fields are editable.
 3. `/api/tariff` runs a real Google-grounded search for that month's tariff, then structures the sourced text into JSON. Statuses: `live-matched`, `live-sourced`, `saved-reference`, `conflict`, `unavailable`. July and August 2026 are kept as checked references; a cached result is never shown as a fresh search.
-4. Verdict: headline, three lines (per kWh, fixed fee, total), difference in LL and USD, sources, and the message with Copy and WhatsApp share.
+4. Verdict: headline and difference in LL and USD, with WhatsApp and Consumer Protection call actions up front when the comparison supports a complaint. Three dropdowns follow: bill breakdown; message preview, tone, language and Copy; sources and provenance.
 
 No accounts, no database, no bill storage. The API never logs bill data.
 
@@ -33,7 +33,7 @@ Behind an HTTPS-inspecting antivirus, run Node with `--use-system-ca`.
 - `lib/http.mjs` — shared request helpers (POST only, same-origin, byte-counted bodies, per-instance limiter, bounded Gemini calls).
 - `api/read.js` — bill photo to structured fields.
 - `api/tariff.js` — grounded search + structuring + reference check.
-- `src/App.jsx`, `src/styles.css` — the one-page app shell (phone frame on wide screens).
+- `src/App.jsx`, `src/styles.css` — the app shell with persistent Home, Bill, Message, and About navigation (phone frame on wide screens). Home keeps the current check; New check clears it. Bill review, charge breakdown, and source details expand only when needed.
 - `tests/tariff.test.mjs` — the acceptance math, including the real August bill.
 
 See `QA.md` for what was tested and what was not.

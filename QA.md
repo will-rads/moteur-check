@@ -1,5 +1,27 @@
 # QA — Moteur Check, 17 Sept 2026
 
+## Final result dropdowns, 20 September 2026
+
+- Result dropdowns are ordered: Your bill breakdown; Preview or customise your message; Sources and provenance. Edit bill was removed. The red 14px complaint button, bracketed hotline, WhatsApp action, and existing design are retained.
+- `npm run verify` passes (five tests and build). Both English and Arabic fit at 390x844; all three disclosures open and close, source links remain available, and Edit bill is absent. Controlled responses were used for layout checks; fresh production lookup and screenshots follow deployment.
+
+## Contact actions update, 20 September 2026 (local, awaiting approval)
+
+- Bill results now show WhatsApp and the Consumer Protection call link immediately below the amount. Message preview, tone, language, and Copy are inside a native disclosure, shared with the Message tab. Existing calculation and message eligibility rules are unchanged.
+- Five calculation tests and production build pass. English and Arabic results fit at 390x844 with zero page scroll. Also checked 375x667, 320x640, and 1440x900: no horizontal overflow; smaller layouts scroll inside the app.
+- Verified polite defaults in the app language, tone/language changes in the WhatsApp URL, clipboard text (allowing Windows line endings), `tel:1739`, Message tab, and absent complaint actions for clean/conflicting/unavailable comparisons. No runtime errors; no messages or calls made.
+- New review screenshots: `../docs/linkedin-launch/moteur-check-actions-en.png` and `moteur-check-actions-ar.png`, each 1170x2532. Both re-render the previously checked August bill and saved tariff using intercepted API responses, not a new live lookup. No raw bill or personal identifiers appear.
+- Follow-up: restored Fable's red complaint button with its original 14px white text and bracketed number, restored white WhatsApp text, and removed the result eyebrow/New check row. Build passes; both 390x844 captures fit without scroll; Home > New check resets correctly. Latest captures: `moteur-check-actions-red-en.png` and `moteur-check-actions-red-ar.png`. Previous screenshots retained pending user approval. No push or deployment.
+
+## Navigation update, 20 September 2026 (local)
+
+- Added persistent Home, Bill, Message, and About navigation. Home preserves the current bill; New check clears it; editing invalidates the old verdict and message until a new comparison completes. Meter readings, zone changes, detailed charge comparisons, sources, and hotline information use expandable sections.
+- Existing five calculation tests and production build pass. Browser checks passed at 390x844, 375x667, 320x640, and 1440x900, plus Arabic RTL at 390x844. No horizontal page overflow or bottom-nav overlap. Home, review, result, and message fit without page scrolling at 390x844; smaller screens and expanded detail sections scroll within the app.
+- Exercised empty tabs, missing-zone prompt, home/resume, all three charge breakdown views, tone switching, sources, editing, new check, unsupported PDF, and conflict/unavailable tariff states. Conflict/unavailable states show no numeric verdict or complaint message. No browser runtime errors. Simulated responses were used for these controlled state checks.
+- Separately ran the real August bill through the local preview API: 311 kWh, 19,550,000 LL charged, 15,387,951 LL calculated, difference 4,162,049 LL / $46.40 / 27.04745%. This run returned `saved-reference` because the live response's figures were not tied to retrieved sources; the UI disclosed the fallback. Clipboard contents and WhatsApp draft URL contained the correct amount. No message sent.
+- Public-safe home and result screenshots are kept in `../docs/linkedin-launch/`. The result screenshot is a real local run and contains no raw bill image or personal identifiers. UI changes have not been deployed in this task.
+- Real device camera, OS keyboard, installation, VoiceOver/TalkBack, and App Store packaging/review remain untested. This remains a web app with a home-screen manifest.
+
 ## Tested
 
 - `npm run verify`: 5 tests pass (real August bill exact verdict 15,387,951 / 4,162,049 LL, 27.04745%, $46.40; July remote 10A/15A; synthetic month with different fees; zero kWh, 7A/12A rejection, no message when not over; Arabic digits and discrepancy warnings). Production build passes.
