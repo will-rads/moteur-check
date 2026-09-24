@@ -42,15 +42,41 @@ test("district, month, zone and exchange rate are validated", () => {
   assert.equal(buildReport({ ...BASE, town: "" }).town, "(location n/a)");
 });
 
+test("printed totals require explicit confirmation and preserve independent evidence", () => {
+  for (const printedTotalsConfirmed of [undefined, false, "true", 1]) {
+    const report = buildReport({ ...BASE, printedTotalsConfirmed });
+    assert.equal("printed_total" in report, false);
+    assert.equal("standing_charge" in report, false);
+  }
+  const confirmed = { ...BASE, printedTotalsConfirmed: true };
+  const report = buildReport(confirmed);
+  assert.equal(report.printed_total, 19740195);
+  assert.equal(report.standing_charge, 685000);
+  assert.equal(report.printed_total - report.standing_charge, 395 * 48241);
+  assert.equal("energy_total" in report, false);
+  assert.match(report.note, /User confirmed the printed total is before VAT/);
+  // A misread price cannot change either independent printed amount to make it fit.
+  const badPrice = buildReport({ ...confirmed, bill: { ...BILL, rateLL: 4824 } });
+  assert.notEqual(badPrice.printed_total - badPrice.standing_charge, badPrice.kwh_consumed * badPrice.unit_price);
+  assert.equal(buildReport({ ...confirmed, bill: { ...BILL, fixedLL: 0 } }).standing_charge, 0);
+  for (const patch of [{ fixedLL: null }, { fixedLL: undefined }, { totalLL: null }, { totalLL: -1 }, { totalLL: NaN }, { totalLL: Infinity }, { totalLL: "19740195" }, { totalLL: 100 }]) {
+    assert.throws(() => buildReport({ ...confirmed, bill: { ...BILL, ...patch } }), ContributeError);
+  }
+  const unknown = buildReport({ ...BASE, bill: { ...BILL, fixedLL: null, totalLL: null } });
+  assert.equal("printed_total" in unknown, false);
+  assert.equal("standing_charge" in unknown, false);
+});
+
 test("configuration, consent and partner responses are enforced without live submissions", async () => {
   const originalKey = process.env.MOTEUR_INDEX_KEY;
   const originalFetch = globalThis.fetch;
   let calls = 0;
   let upstreamStatus = 202;
+  let expectedReport = buildReport(BASE);
   globalThis.fetch = async (_url, options) => {
     calls++;
     assert.equal(options.headers["X-Partner-Key"], "test-key");
-    assert.deepEqual(JSON.parse(options.body), buildReport(BASE));
+    assert.deepEqual(JSON.parse(options.body), expectedReport);
     return { ok: upstreamStatus >= 200 && upstreamStatus < 300, status: upstreamStatus, json: async () => ({ reconciled: true, reconcile_depth: "partial" }) };
   };
   async function request(method, body) {
@@ -74,6 +100,13 @@ test("configuration, consent and partner responses are enforced without live sub
     assert.equal(queued.body.status, "queued");
     assert.equal(queued.statusCode, 200);
     assert.equal(calls, 1);
+    const confirmed = { ...BASE, consent: true, printedTotalsConfirmed: true };
+    expectedReport = buildReport(confirmed);
+    assert.equal((await request("POST", confirmed)).statusCode, 200);
+    assert.equal(calls, 2);
+    assert.equal((await request("POST", { ...confirmed, bill: { ...BILL, fixedLL: null } })).statusCode, 400);
+    assert.equal(calls, 2);
+    expectedReport = buildReport(BASE);
     upstreamStatus = 200;
     assert.equal((await request("POST", { ...BASE, consent: true })).statusCode, 502);
     upstreamStatus = 429;

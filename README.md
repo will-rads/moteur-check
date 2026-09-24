@@ -57,9 +57,9 @@ panel stays hidden. `MOTEUR_INDEX_PARTNER` defaults to `moteur-check`. The same 
 handlers run locally through Vite.
 
 After the verdict, users choose a district and optional town, preview every outgoing
-field, and explicitly consent. Editing the location resets consent. Submissions go to
+field, and explicitly consent. Editing the location or the optional total confirmation resets consent. Submissions go to
 Moteur Index for storage, moderation and possible publication, never directly onto the map.
-The photo, customer details, dollar total, grand total and our verdict are not sent.
+The photo, customer details, dollar total and our verdict are not sent.
 
 Only metered bills are supported. A missing unit price is an error, never a flat
 subscription. Meter readings must agree with consumption when present. Standing charges
@@ -68,8 +68,17 @@ billing month's tariff exchange rate, which is shown in the preview, never hidde
 
 We send meter readings, consumption and the LL unit price. `energy_total` is deliberately
 omitted because the reader does not extract an independent energy subtotal. Deriving it
-from kWh times price would falsely appear to verify OCR. VAT stays unknown. The UI makes
+from kWh times price would falsely appear to verify OCR. VAT status stays unknown. The UI makes
 no claim of full reconciliation; only HTTP 202 from the partner API confirms queued status.
+
+For independent price reconciliation, users can optionally confirm that the printed
+total contains only metered energy and the standing charge, before VAT and without
+arrears, deposits, credits or other adjustments. Only then do we send `printed_total`
+from the reviewed `totalLL` and `standing_charge` from `fixedLL`, together and unchanged.
+Both amounts appear in the outgoing preview. A missing charge stays unknown, never zero;
+the user must explicitly enter 0 in Edit bill if no charge applies. Without confirmation
+we omit both fields, so the index cannot default a missing charge to zero for a total
+we have sent. We do not subtract fees or calculate an energy subtotal ourselves.
 
 Run `npm run verify` for regression checks and a production build. Tests mock the partner
 API and do not create public reports. The original tariff lookup remains unchanged; the

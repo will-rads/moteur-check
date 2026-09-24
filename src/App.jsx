@@ -523,6 +523,7 @@ function Contribute({ t, bill, month, zone, lookup, areaHint, onEdit }) {
   const [enabled, setEnabled] = useState(false);
   const [district, setDistrict] = useState("");
   const [town, setTown] = useState(areaHint || "");
+  const [printedTotalsConfirmed, setPrintedTotalsConfirmed] = useState(false);
   const [consent, setConsent] = useState(false);
   const [state, setState] = useState("idle");
   const [error, setError] = useState("");
@@ -535,7 +536,8 @@ function Contribute({ t, bill, month, zone, lookup, areaHint, onEdit }) {
     return () => controller.abort();
   }, []);
 
-  const input = { bill, district, town, month, zone, tariffRateLL: lookup?.tariff?.exchangeRateLL || null };
+  const canConfirmTotals = Number.isFinite(bill.totalLL) && Number.isFinite(bill.fixedLL) && bill.fixedLL >= 0 && bill.totalLL >= bill.fixedLL;
+  const input = { bill, district, town, month, zone, printedTotalsConfirmed, tariffRateLL: lookup?.tariff?.exchangeRateLL || null };
   let preview = null;
   let previewError = "";
   if (district) {
@@ -584,6 +586,15 @@ function Contribute({ t, bill, month, zone, lookup, areaHint, onEdit }) {
           <span>{t.contributeTown}</span>
           <input type="text" value={town} maxLength={80} disabled={state === "sending"} onChange={(e) => { setTown(e.target.value); setConsent(false); }} />
         </label>
+        <section aria-label={t.contributeTotalsTitle}>
+          <h3>{t.contributeTotalsTitle}</h3>
+          <p>{t.fTotal}: {formatLL(bill.totalLL)} LL<br />{t.fFixed}: {formatLL(bill.fixedLL)} LL</p>
+          <label className="contribute-consent">
+            <input type="checkbox" checked={printedTotalsConfirmed} disabled={!canConfirmTotals || state === "sending"} onChange={(e) => { setPrintedTotalsConfirmed(e.target.checked); setConsent(false); }} />
+            <span>{t.contributeTotalsConfirm}</span>
+          </label>
+          <p className="muted">{t.contributeTotalsHint}</p>
+        </section>
         {preview && <section aria-label={t.contributePreview}>
           <h3>{t.contributePreview}</h3>
           <dl className="contribute-preview">
