@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { buildReport, DISTRICTS } from "../lib/contribute.mjs";
 import { buildMessages, compare, formatLL, formatUSD, monthLabel, normalizeBill, verdictKey } from "../lib/tariff.mjs";
 import { T } from "./i18n.js";
 
@@ -294,7 +295,7 @@ export default function App() {
           )}
 
           {(page === "bill" || page === "message") && step === "verdict" && lookup && outcome && (
-            <Verdict t={t} lang={lang} view={page} lookup={lookup} outcome={outcome} month={month} zone={zone} warnings={warnings} onRetry={edit} onNavigate={setPage} />
+            <Verdict t={t} lang={lang} view={page} lookup={lookup} outcome={outcome} month={month} zone={zone} warnings={warnings} areaHint={fields.areaHint} onRetry={edit} onNavigate={setPage} />
           )}
 
           {page === "message" && step !== "verdict" && <EmptyState t={t} onStart={() => setPage(step === "review" ? "bill" : "home")} />}
@@ -373,7 +374,7 @@ function Row({ name, line, comment, rate, t }) {
   );
 }
 
-function Verdict({ t, lang, view, lookup, outcome, month, zone, warnings, onRetry, onNavigate }) {
+function Verdict({ t, lang, view, lookup, outcome, month, zone, warnings, areaHint, onRetry, onNavigate }) {
   const [cheeky, setCheeky] = useState(false);
   const [msgLang, setMsgLang] = useState(lang);
   const [copied, setCopied] = useState(false);
@@ -491,6 +492,11 @@ function Verdict({ t, lang, view, lookup, outcome, month, zone, warnings, onRetr
 
       {warnings.map((w) => <p key={w} className="note">{w}</p>)}
       {!messages && result && confirmed && <p className="note">{t.noComplaint}</p>}
+
+      {/* Contributing is offered only once the tariff is confirmed and the figures
+          hold together. Sharing an unconfirmed or unreadable bill would put work on
+          a moderator that this app is better placed to avoid. */}
+      {result && confirmed && <Contribute t={t} bill={bill} month={month} zone={zone} lookup={lookup} areaHint={areaHint} onEdit={onRetry} />}
       </>}
 
       {view === "message" && (messages ? (
@@ -508,6 +514,97 @@ function Verdict({ t, lang, view, lookup, outcome, month, zone, warnings, onRetr
         <div className="empty-state"><h1 className="page-title">{t.nav.message}</h1><p className="note">{result && confirmed ? t.noComplaint : t.headlines.unconfirmed}</p><button type="button" className="btn" onClick={() => onNavigate("bill")}>{t.backToBill}</button></div>
       ))}
     </section>
+  );
+}
+
+
+// The panel stays hidden until the server confirms the partner key is configured.
+function Contribute({ t, bill, month, zone, lookup, areaHint, onEdit }) {
+  const [enabled, setEnabled] = useState(false);
+  const [district, setDistrict] = useState("");
+  const [town, setTown] = useState(areaHint || "");
+  const [consent, setConsent] = useState(false);
+  const [state, setState] = useState("idle");
+  const [error, setError] = useState("");
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/contribute", { signal: controller.signal })
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => setEnabled(data?.enabled === true))
+      .catch(() => {}); // Unavailable configuration means no sharing offer.
+    return () => controller.abort();
+  }, []);
+
+  const input = { bill, district, town, month, zone, tariffRateLL: lookup?.tariff?.exchangeRateLL || null };
+  let preview = null;
+  let previewError = "";
+  if (district) {
+    try { preview = buildReport(input); } catch (e) { previewError = e.message; }
+  }
+  async function share(event) {
+    event.preventDefault();
+    if (!enabled || !consent || !preview || state === "sending") return;
+    setError("");
+    setState("sending");
+    try {
+      const res = await fetch("/api/contribute", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...input, consent }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.status !== "queued") throw new Error(data.error || t.contributeFailed);
+      setState("done");
+    } catch (e) {
+      setError(e.message);
+      setState("idle");
+    }
+  }
+  if (!enabled) return null;
+  if (state === "done") return (
+    <div className="note contribute-done" role="status">
+      <strong>{t.contributeDone}</strong>
+      <p>{t.contributeDoneText}</p>
+      <a href="https://moteurindex.com" target="_blank" rel="noopener noreferrer">{t.contributeLink}</a>
+    </div>
+  );
+  return (
+    <details className="disclosure contribute">
+      <summary>{t.contributeTitle}</summary>
+      <form onSubmit={share}>
+        <p className="muted">{t.contributeText}</p>
+        <label className="field">
+          <span>{t.contributeDistrict}</span>
+          <select value={district} disabled={state === "sending"} onChange={(e) => { setDistrict(e.target.value); setConsent(false); }} required>
+            <option value="">{t.contributePick}</option>
+            {DISTRICTS.map((d) => <option key={d} value={d}>{d}</option>)}
+          </select>
+        </label>
+        <label className="field">
+          <span>{t.contributeTown}</span>
+          <input type="text" value={town} maxLength={80} disabled={state === "sending"} onChange={(e) => { setTown(e.target.value); setConsent(false); }} />
+        </label>
+        {preview && <section aria-label={t.contributePreview}>
+          <h3>{t.contributePreview}</h3>
+          <dl className="contribute-preview">
+            {Object.entries(preview).filter(([key]) => key !== "consent").map(([key, value]) => (
+              <div key={key} className={key === "note" ? "contribute-note" : undefined}><dt>{t.contributeFields[key]}</dt><dd dir={key === "note" ? "ltr" : undefined}>{key === "price_type" ? t.contributeMetered : String(value)}</dd></div>
+            ))}
+          </dl>
+          <p className="muted">{t.contributeReviewHint}</p>
+        </section>}
+        {previewError && <p className="error" role="alert">{previewError}</p>}
+        <button type="button" className="btn ghost" disabled={state === "sending"} onClick={onEdit}>{t.editBill}</button>
+        <label className="contribute-consent">
+          <input type="checkbox" checked={consent} required disabled={!preview || state === "sending"} onChange={(e) => setConsent(e.target.checked)} />
+          <span>{t.contributeConsent}</span>
+        </label>
+        {error && <p className="error" role="alert">{error}</p>}
+        <button type="submit" className="btn primary" disabled={!consent || !preview || state === "sending"}>
+          {state === "sending" ? t.contributeSending : t.contributeSend}
+        </button>
+      </form>
+    </details>
   );
 }
 

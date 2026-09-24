@@ -3,6 +3,7 @@ import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import read from "./api/read.js";
 import tariff from "./api/tariff.js";
+import contribute from "./api/contribute.js";
 
 export default defineConfig(({ mode }) => {
   // ponytail: run the same API handlers locally; no second backend or SDK.
@@ -10,9 +11,12 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, root, "");
   process.env.GEMINI_API_KEY ||= env.GEMINI_API_KEY;
   process.env.GEMINI_MODEL ||= env.GEMINI_MODEL;
+  process.env.MOTEUR_INDEX_KEY ||= env.MOTEUR_INDEX_KEY || "";
+  process.env.MOTEUR_INDEX_PARTNER ||= env.MOTEUR_INDEX_PARTNER || "";
   const localApi = (server) => {
     server.middlewares.use("/api/read", read);
     server.middlewares.use("/api/tariff", tariff);
+    server.middlewares.use("/api/contribute", contribute);
   };
   return {
     plugins: [react(), { name: "local-api", configureServer: localApi, configurePreviewServer: localApi }],
