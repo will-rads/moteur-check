@@ -13,11 +13,17 @@ import { RequestError } from "../lib/tariff.mjs";
 import { buildReport, ContributeError, MOTEUR_INDEX_URL } from "../lib/contribute.mjs";
 
 export default async function contribute(req, res) {
+  if (req.method === "GET") {
+    res.setHeader("Content-Type", "application/json; charset=utf-8");
+    res.setHeader("Cache-Control", "no-store");
+    res.statusCode = 200;
+    return res.end(JSON.stringify({ enabled: Boolean(process.env.MOTEUR_INDEX_KEY?.trim()) }));
+  }
   const ctx = prepare(req, res);
   if (!ctx) return;
   const { send, ip } = ctx;
   try {
-    if (!process.env.MOTEUR_INDEX_KEY) {
+    if (!process.env.MOTEUR_INDEX_KEY?.trim()) {
       throw new RequestError("Contributing is not configured on this deployment.", 503);
     }
     if (!(req.headers["content-type"] || "").startsWith("application/json")) {
@@ -84,6 +90,8 @@ export default async function contribute(req, res) {
       const detail = data?.errors ? Object.values(data.errors).join(" ") : data?.detail || data?.error;
       throw new RequestError(detail ? `Moteur Index could not accept this: ${detail}` : "Moteur Index could not accept this bill.", 400);
     }
+
+    if (response.status !== 202) throw new RequestError("Moteur Index did not confirm the submission. Check with the index before retrying.", 502);
 
     // 202 from the index: queued for a human, not published. Say exactly that — telling
     // someone their bill is "on the map" when a moderator has not seen it would be a

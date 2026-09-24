@@ -51,31 +51,29 @@ See `QA.md` for what was tested and what was not.
 
 ## Contributing bills to Moteur Index
 
-[Moteur Index](https://moteurindex.com) is a public crowd-reported index of what people
-across Lebanon pay for generator electricity. After a check, the user can offer their
-bill's figures to it — opt-in, no photo, no name, no phone number.
+Set the server-only `MOTEUR_INDEX_KEY` issued by Moteur Index and redeploy to enable
+sharing. `GET /api/contribute` returns only `{ enabled: boolean }`; without a key the
+panel stays hidden. `MOTEUR_INDEX_PARTNER` defaults to `moteur-check`. The same API
+handlers run locally through Vite.
 
-Set `MOTEUR_INDEX_KEY` to switch it on. Without it the panel is inert and everything
-else works unchanged.
+After the verdict, users choose a district and optional town, preview every outgoing
+field, and explicitly consent. Editing the location resets consent. Submissions go to
+Moteur Index for storage, moderation and possible publication, never directly onto the map.
+The photo, customer details, dollar total, grand total and our verdict are not sent.
 
-What is sent, and what is deliberately not:
+Only metered bills are supported. A missing unit price is an error, never a flat
+subscription. Meter readings must agree with consumption when present. Standing charges
+stay in the note, separate from the per-kWh price. USD conversion uses the confirmed
+billing month's tariff exchange rate, which is shown in the preview, never hidden OCR.
 
-- **Sent:** district, town, the per-kWh price or monthly fee in USD, the month, the meter
-  readings and the unit price. The readings and price go along so the index can check the
-  bill's arithmetic closes and catch an OCR misread before a human reviews it.
-- **Not sent:** the photo, any name, any phone number, any identifier — and not our
-  overcharge percentage either. The index recomputes the comparison from the raw figures
-  against its own confirmed ceiling, so every number it publishes comes from one
-  methodology rather than two.
+We send meter readings, consumption and the LL unit price. `energy_total` is deliberately
+omitted because the reader does not extract an independent energy subtotal. Deriving it
+from kWh times price would falsely appear to verify OCR. VAT stays unknown. The UI makes
+no claim of full reconciliation; only HTTP 202 from the partner API confirms queued status.
 
-Nothing published itself: every contribution waits for a person at Moteur Index to review
-it. The app says so rather than claiming the bill is on the map.
-
-One methodology rule is worth knowing if you touch `lib/contribute.mjs`: a fixed monthly
-fee *alongside* a per-kWh rate is a standing charge, not a subscription. It is recorded in
-the note and never folded into either price axis. Converting a subscription into a per-kWh
-figure assumes a household draws its full breaker limit every hour, which understated
-Beirut's prices by 2.4x in an earlier version of the index.
+Run `npm run verify` for regression checks and a production build. Tests mock the partner
+API and do not create public reports. The original tariff lookup remains unchanged; the
+Index tariff API is not a replacement for the app's month-specific rates and fixed fees.
 
 ## Credits
 

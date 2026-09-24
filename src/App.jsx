@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { DISTRICTS } from "../lib/contribute.mjs";
+import { buildReport, DISTRICTS } from "../lib/contribute.mjs";
 import { buildMessages, compare, formatLL, formatUSD, monthLabel, normalizeBill, verdictKey } from "../lib/tariff.mjs";
 import { T } from "./i18n.js";
 
 const CONFIRMED = ["live-matched", "live-sourced", "saved-reference"];
-const EMPTY = { periodStart: "", periodEnd: "", kwh: "", rateLL: "", fixedLL: "", amps: "", totalLL: "", totalUSD: "", previousReading: "", currentReading: "", areaHint: "" };
+const EMPTY = { periodStart: "", periodEnd: "", kwh: "", rateLL: "", fixedLL: "", amps: "", totalLL: "", previousReading: "", currentReading: "", areaHint: "" };
 
 async function shrink(file) {
   let bitmap;
@@ -142,9 +142,6 @@ export default function App() {
         fixedLL: num(data.fixedFeeLL),
         amps: num(data.amps),
         totalLL: num(data.totalLL),
-        // Not shown or edited; kept only so a contribution can be converted at the
-        // rate the operator actually billed at rather than at a published one.
-        totalUSD: num(data.totalUSD),
         previousReading: num(data.previousReading),
         currentReading: num(data.currentReading),
         areaHint: num(data.areaHint),
@@ -298,7 +295,7 @@ export default function App() {
           )}
 
           {(page === "bill" || page === "message") && step === "verdict" && lookup && outcome && (
-            <Verdict t={t} lang={lang} view={page} lookup={lookup} outcome={outcome} month={month} zone={zone} warnings={warnings} areaHint={fields.areaHint} totalUSD={fields.totalUSD} onRetry={edit} onNavigate={setPage} />
+            <Verdict t={t} lang={lang} view={page} lookup={lookup} outcome={outcome} month={month} zone={zone} warnings={warnings} areaHint={fields.areaHint} onRetry={edit} onNavigate={setPage} />
           )}
 
           {page === "message" && step !== "verdict" && <EmptyState t={t} onStart={() => setPage(step === "review" ? "bill" : "home")} />}
@@ -377,7 +374,7 @@ function Row({ name, line, comment, rate, t }) {
   );
 }
 
-function Verdict({ t, lang, view, lookup, outcome, month, zone, warnings, areaHint, totalUSD, onRetry, onNavigate }) {
+function Verdict({ t, lang, view, lookup, outcome, month, zone, warnings, areaHint, onRetry, onNavigate }) {
   const [cheeky, setCheeky] = useState(false);
   const [msgLang, setMsgLang] = useState(lang);
   const [copied, setCopied] = useState(false);
@@ -499,7 +496,7 @@ function Verdict({ t, lang, view, lookup, outcome, month, zone, warnings, areaHi
       {/* Contributing is offered only once the tariff is confirmed and the figures
           hold together. Sharing an unconfirmed or unreadable bill would put work on
           a moderator that this app is better placed to avoid. */}
-      {result && confirmed && <Contribute t={t} bill={bill} month={month} zone={zone} lookup={lookup} areaHint={areaHint} totalUSD={totalUSD} />}
+      {result && confirmed && <Contribute t={t} bill={bill} month={month} zone={zone} lookup={lookup} areaHint={areaHint} onEdit={onRetry} />}
       </>}
 
       {view === "message" && (messages ? (
@@ -521,110 +518,89 @@ function Verdict({ t, lang, view, lookup, outcome, month, zone, warnings, areaHi
 }
 
 
-// Offers the checked figures to Moteur Index, the public price index at moteurindex.com.
-//
-// Deliberately the last thing on the screen. The user came to check their own bill, and
-// that job is finished above this line; contributing is a favour to everyone else and is
-// presented as one — opt-in, skippable, and with the district asked for plainly because
-// a report the index cannot place on a map cannot be published at all.
-//
-// No photo, no name, no phone number leaves this component. See lib/contribute.mjs for
-// exactly what is sent.
-function Contribute({ t, bill, month, zone, lookup, areaHint, totalUSD }) {
+// The panel stays hidden until the server confirms the partner key is configured.
+function Contribute({ t, bill, month, zone, lookup, areaHint, onEdit }) {
+  const [enabled, setEnabled] = useState(false);
   const [district, setDistrict] = useState("");
   const [town, setTown] = useState(areaHint || "");
-  const [hours, setHours] = useState("");
   const [consent, setConsent] = useState(false);
   const [state, setState] = useState("idle");
   const [error, setError] = useState("");
-  const [verified, setVerified] = useState(null);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/contribute", { signal: controller.signal })
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => setEnabled(data?.enabled === true))
+      .catch(() => {}); // Unavailable configuration means no sharing offer.
+    return () => controller.abort();
+  }, []);
 
-  // A bill with no per-kWh rate is a subscription, and the index cannot interpret a
-  // monthly fee without knowing how many hours a day it buys. Bills never print that,
-  // so it is the one extra thing we have to ask for — and only in that case.
-  const needsHours = !(bill.rateLL > 0);
-
+  const input = { bill, district, town, month, zone, tariffRateLL: lookup?.tariff?.exchangeRateLL || null };
+  let preview = null;
+  let previewError = "";
+  if (district) {
+    try { preview = buildReport(input); } catch (e) { previewError = e.message; }
+  }
   async function share(event) {
     event.preventDefault();
+    if (!enabled || !consent || !preview || state === "sending") return;
     setError("");
     setState("sending");
     try {
       const res = await fetch("/api/contribute", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          consent: true,
-          bill,
-          // Lets the index convert at the bill's own implied rate when the operator
-          // printed both totals, which describes what this household actually paid
-          // better than any published figure can.
-          totalUSD: Number(totalUSD) || null,
-          district,
-          town,
-          month,
-          zone,
-          hoursSupply: needsHours ? Number(hours) : null,
-          tariffRateLL: lookup?.tariff?.exchangeRateLL || null,
-        }),
+        body: JSON.stringify({ ...input, consent }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Sharing failed. Please try again.");
-      setVerified(data.reconciled === true && data.reconcileDepth === "full");
+      if (!res.ok || data.status !== "queued") throw new Error(data.error || t.contributeFailed);
       setState("done");
     } catch (e) {
       setError(e.message);
       setState("idle");
     }
   }
-
-  if (state === "done") {
-    return (
-      <div className="note contribute-done">
-        <strong>{t.contributeDone}</strong>
-        <p>{t.contributeDoneText}</p>
-        {verified && <p className="muted">{t.contributeVerified}</p>}
-        <a href="https://moteurindex.com" target="_blank" rel="noopener noreferrer">{t.contributeLink}</a>
-      </div>
-    );
-  }
-
+  if (!enabled) return null;
+  if (state === "done") return (
+    <div className="note contribute-done" role="status">
+      <strong>{t.contributeDone}</strong>
+      <p>{t.contributeDoneText}</p>
+      <a href="https://moteurindex.com" target="_blank" rel="noopener noreferrer">{t.contributeLink}</a>
+    </div>
+  );
   return (
     <details className="disclosure contribute">
       <summary>{t.contributeTitle}</summary>
       <form onSubmit={share}>
         <p className="muted">{t.contributeText}</p>
-
         <label className="field">
           <span>{t.contributeDistrict}</span>
-          <select value={district} onChange={(e) => setDistrict(e.target.value)} required>
+          <select value={district} disabled={state === "sending"} onChange={(e) => { setDistrict(e.target.value); setConsent(false); }} required>
             <option value="">{t.contributePick}</option>
             {DISTRICTS.map((d) => <option key={d} value={d}>{d}</option>)}
           </select>
         </label>
-
         <label className="field">
           <span>{t.contributeTown}</span>
-          <input type="text" value={town} maxLength={80} onChange={(e) => setTown(e.target.value)} />
+          <input type="text" value={town} maxLength={80} disabled={state === "sending"} onChange={(e) => { setTown(e.target.value); setConsent(false); }} />
         </label>
-
-        {needsHours && (
-          <label className="field">
-            <span>{t.contributeHours}</span>
-            <input type="number" min="1" max="24" step="0.5" value={hours} required onChange={(e) => setHours(e.target.value)} />
-            <small className="muted">{t.contributeHoursHint}</small>
-          </label>
-        )}
-
-        {/* Unticked, and the submit button stays disabled until it is ticked. Consent
-            that is pre-granted is not consent. */}
-        <label className="check">
-          <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
+        {preview && <section aria-label={t.contributePreview}>
+          <h3>{t.contributePreview}</h3>
+          <dl className="contribute-preview">
+            {Object.entries(preview).filter(([key]) => key !== "consent").map(([key, value]) => (
+              <div key={key} className={key === "note" ? "contribute-note" : undefined}><dt>{t.contributeFields[key]}</dt><dd dir={key === "note" ? "ltr" : undefined}>{key === "price_type" ? t.contributeMetered : String(value)}</dd></div>
+            ))}
+          </dl>
+          <p className="muted">{t.contributeReviewHint}</p>
+        </section>}
+        {previewError && <p className="error" role="alert">{previewError}</p>}
+        <button type="button" className="btn ghost" disabled={state === "sending"} onClick={onEdit}>{t.editBill}</button>
+        <label className="contribute-consent">
+          <input type="checkbox" checked={consent} required disabled={!preview || state === "sending"} onChange={(e) => setConsent(e.target.checked)} />
           <span>{t.contributeConsent}</span>
         </label>
-
         {error && <p className="error" role="alert">{error}</p>}
-
-        <button type="submit" className="btn primary" disabled={!consent || !district || state === "sending"}>
+        <button type="submit" className="btn primary" disabled={!consent || !preview || state === "sending"}>
           {state === "sending" ? t.contributeSending : t.contributeSend}
         </button>
       </form>
