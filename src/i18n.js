@@ -18,7 +18,11 @@ export const T = {
     customizeMessage: "Preview or customise your message",
     reportOverbilling: "Report generator overbilling",
     // Contributing to the Moteur Index public price index.
-    contributeTitle: "Add this to Lebanon's price map",
+    contributeTitle: "Help map generator prices",
+    contributeIntro: "Optional: share your bill’s figures with Moteur Index to help people compare prices.",
+    contributeOpen: "Contribute your bill",
+    contributeHide: "Hide contribution form",
+    contributeClose: "Close",
     contributeText:
       "Help Moteur Index map generator prices across Lebanon. Review the figures below before sharing them for storage, moderation and possible publication. We do not send your bill photo, name or phone number. Please keep personal details out of the town field.",
     contributeDistrict: "Which district is this bill for?",
@@ -147,7 +151,11 @@ export const T = {
     customizeMessage: "شوف الرسالة أو عدّل خياراتها",
     reportOverbilling: "بلّغ عن زيادة بفاتورة الموتور",
     // المساهمة في مؤشر أسعار المولّدات العام.
-    contributeTitle: "ضيف هالفاتورة عخريطة الأسعار",
+    contributeTitle: "ساعد برسم خريطة أسعار المولّدات",
+    contributeIntro: "اختياري: شارك أرقام فاتورتك مع مؤشر موتور لتساعد الناس تقارن الأسعار.",
+    contributeOpen: "ساهم بأرقام فاتورتك",
+    contributeHide: "خبّي نموذج المشاركة",
+    contributeClose: "سكّر",
     contributeText:
       "ساعد مؤشر موتور يجمع أسعار المولّدات بكل لبنان. راجع الأرقام تحت قبل ما تشاركها للحفظ والمراجعة والنشر المحتمل. ما منبعت صورة فاتورتك ولا اسمك ولا رقم تلفونك. ما تحط معلومات شخصية بخانة البلدة.",
     contributeDistrict: "لأي قضاء هالفاتورة؟",

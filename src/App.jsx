@@ -522,6 +522,7 @@ function Verdict({ t, lang, view, lookup, outcome, month, zone, warnings, areaHi
 function Contribute({ t, bill, month, zone, lookup, areaHint, onEdit }) {
   const [enabled, setEnabled] = useState(false);
   const [district, setDistrict] = useState("");
+  const districtDialog = useRef(null);
   const [town, setTown] = useState(areaHint || "");
   const [printedTotalsConfirmed, setPrintedTotalsConfirmed] = useState(false);
   const [consent, setConsent] = useState(false);
@@ -572,28 +573,40 @@ function Contribute({ t, bill, month, zone, lookup, areaHint, onEdit }) {
   );
   return (
     <details className="disclosure contribute">
-      <summary>{t.contributeTitle}</summary>
+      <summary className="contribute-invite">
+        <strong>{t.contributeTitle}</strong>
+        <span className="muted">{t.contributeIntro}</span>
+        <span className="contribute-toggle"><span className="when-closed">{t.contributeOpen}</span><span className="when-open">{t.contributeHide}</span><span aria-hidden="true">⌄</span></span>
+      </summary>
       <form onSubmit={share}>
         <p className="muted">{t.contributeText}</p>
-        <label className="field">
-          <span>{t.contributeDistrict}</span>
-          <select value={district} disabled={state === "sending"} onChange={(e) => { setDistrict(e.target.value); setConsent(false); }} required>
-            <option value="">{t.contributePick}</option>
-            {DISTRICTS.map((d) => <option key={d} value={d}>{d}</option>)}
-          </select>
-        </label>
+        <div className="field">
+          <span id="district-label">{t.contributeDistrict}</span>
+          <button type="button" className="district-trigger" aria-labelledby="district-label district-value" aria-haspopup="dialog" disabled={state === "sending"} onClick={() => districtDialog.current.showModal()}>
+            <span id="district-value">{district || t.contributePick}</span><span aria-hidden="true">⌄</span>
+          </button>
+          {/* ponytail: native dialog supplies focus trapping, Escape and focus restoration. */}
+          <dialog ref={districtDialog} className="district-sheet" aria-labelledby="district-title" onClick={(e) => { if (e.target === e.currentTarget) districtDialog.current.close(); }}>
+            <div className="district-sheet-inner">
+              <header><h2 id="district-title">{t.contributePick}</h2><button type="button" className="appbar-btn" onClick={() => districtDialog.current.close()}>{t.contributeClose}</button></header>
+              <div className="district-options">
+                {DISTRICTS.map((d) => <button type="button" key={d} aria-pressed={district === d} onClick={() => { setDistrict(d); setConsent(false); districtDialog.current.close(); }}><span>{d}</span>{district === d && <span aria-hidden="true">✓</span>}</button>)}
+              </div>
+            </div>
+          </dialog>
+        </div>
         <label className="field">
           <span>{t.contributeTown}</span>
           <input type="text" value={town} maxLength={80} disabled={state === "sending"} onChange={(e) => { setTown(e.target.value); setConsent(false); }} />
         </label>
-        <section aria-label={t.contributeTotalsTitle}>
+        <section className="contribute-totals" aria-label={t.contributeTotalsTitle}>
           <h3>{t.contributeTotalsTitle}</h3>
-          <p>{t.fTotal}: {formatLL(bill.totalLL)} LL<br />{t.fFixed}: {formatLL(bill.fixedLL)} LL</p>
+          <dl className="contribute-amounts"><div><dt>{t.fTotal}</dt><dd>{formatLL(bill.totalLL)} LL</dd></div><div><dt>{t.fFixed}</dt><dd>{formatLL(bill.fixedLL)} LL</dd></div></dl>
           <label className="contribute-consent">
             <input type="checkbox" checked={printedTotalsConfirmed} disabled={!canConfirmTotals || state === "sending"} onChange={(e) => { setPrintedTotalsConfirmed(e.target.checked); setConsent(false); }} />
             <span>{t.contributeTotalsConfirm}</span>
           </label>
-          <p className="muted">{t.contributeTotalsHint}</p>
+          <p className="muted contribute-checkbox-hint">{t.contributeTotalsHint}</p>
         </section>
         {preview && <section aria-label={t.contributePreview}>
           <h3>{t.contributePreview}</h3>
